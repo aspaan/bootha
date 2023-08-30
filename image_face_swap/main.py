@@ -80,4 +80,5 @@ def upload_blob(connection_string, container_name, blob_name, source_path):
 
 
 if __name__ == "__main__":
+    os.mkdir("./temp")
     listen_to_azure_queue()
