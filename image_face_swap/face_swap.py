@@ -38,7 +38,7 @@ def face_swap_model() -> Any:
     with THREAD_LOCK:
         if FACE_SWAPPER is None:
             model_path = resolve_relative_path('../model/inswapper_128.onnx')
-            FACE_SWAPPER = insightface.model_zoo.get_model(model_path)
+            FACE_SWAPPER = insightface.model_zoo.get_model(model_path, providers=get_swap_providers)
     return FACE_SWAPPER
 
 def enhance_model() -> Any:
@@ -47,16 +47,34 @@ def enhance_model() -> Any:
     with THREAD_LOCK:
         if FACE_ENHANCER is None:
             model_path = resolve_relative_path('../model/GFPGANv1.4.pth')
-            FACE_ENHANCER = GFPGANer(model_path=model_path, upscale=1, device='cpu')
+            FACE_ENHANCER = GFPGANer(model_path=model_path, upscale=1, device=get_gfpgan_device())
     return FACE_ENHANCER
-def process_image(source_path: str, target_path: str, output_path: str) -> None:
+
+def get_swap_providers() -> list[str]:
+    execution_provider = os.environ.get("EXECUTION_PROVIDER")
+    if execution_provider == 'gpu':
+        return ['CUDAExecutionProvider','CPUExecutionProvider']
+    if execution_provider == 'coreml':
+        return ['CoreMLExecutionProvider','CPUExecutionProvider']
+    return ['CPUExecutionProvider']
+
+def get_gfpgan_device() -> str:
+    execution_provider = os.environ.get("EXECUTION_PROVIDER")
+    if execution_provider == 'gpu':
+        return 'cuda'
+    if execution_provider == 'coreml':
+        return 'mps'
+    return 'cpu'
+
+def process_image(source_path: str, target_path: str, output_path: str, enhance: bool) -> None:
     source_face = get_one_face(cv2.imread(source_path))
     target_frame = cv2.imread(target_path)
     many_faces = get_many_faces(target_frame)
     if many_faces:
         for target_face in many_faces:
             target_frame = swap_face(source_face, target_face, target_frame)
-            target_frame = enhance_face(target_face, target_frame)
+            if enhance:
+                target_frame = enhance_face(target_face, target_frame)
     cv2.imwrite(output_path, target_frame)
 
 def swap_face(source_face: Face, target_face: Face, temp_frame: Frame) -> Frame:
@@ -82,6 +100,7 @@ def enhance_face(target_face: Face, temp_frame: Frame) -> Frame:
         temp_frame[start_y:end_y, start_x:end_x] = temp_face
 
     return temp_frame
+
 
 
 def get_one_face(frame: Frame, position: int = 0) -> Optional[Face]:

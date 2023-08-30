@@ -36,6 +36,9 @@ def listen_to_azure_queue():
             source_img = json_data["source_image"]
             target_img = json_data["target_image"]
             result_img = json_data["result_image"]
+            enhance = False
+            if "enhance" in json_data:
+                enhance = json_data["enhance"]
 
             logging.info(f"Getting source file {source_img} from {source_container}")
             download_blob(connection_string, source_container, source_img, f'./temp/{source_img}')
@@ -44,7 +47,7 @@ def listen_to_azure_queue():
             download_blob(connection_string, target_container, target_img, f'./temp/{target_img}')
 
             logging.info("Performing face swap")
-            face_swap.process_image(f'./temp/{source_img}', f'./temp/{target_img}', f"./temp/{result_img}")
+            face_swap.process_image(f'./temp/{source_img}', f'./temp/{target_img}', f"./temp/{result_img}", enhance)
 
             logging.info(f"Uploading resulting image {result_img} to {result_container}")
             upload_blob(connection_string, result_container, result_img, f"./temp/{result_img}")
@@ -80,5 +83,6 @@ def upload_blob(connection_string, container_name, blob_name, source_path):
 
 
 if __name__ == "__main__":
-    os.mkdir("./temp")
+    if not os.path.exists("./temp"):
+        os.mkdir("./temp")
     listen_to_azure_queue()
