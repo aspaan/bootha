@@ -11,7 +11,8 @@ RUN curl -o /model/inswapper_128.onnx https://geophotostorage.blob.core.windows.
 
 RUN apt-get update -y
 RUN apt install libgl1-mesa-glx -y
-RUN apt-get install 'libsm6'\
+RUN apt-get install 'ffmpeg'\
+    'libsm6'\
     'libxext6'  -y
 RUN pip install --upgrade pip
 
